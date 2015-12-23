@@ -30,6 +30,7 @@ func (c *Client) Init(zkIP string) {
 func (c *Client) Connect(containerName string, zkPath string) {
 
 	prevcontainers := 0
+	var address string
 
 	for {
 		containers, err := c.dkrClient.ListContainers(docker.ListContainersOptions{All: false, Filters: map[string][]string{"name": {containerName}, "status": {"running"}}})
@@ -38,12 +39,14 @@ func (c *Client) Connect(containerName string, zkPath string) {
 			continue
 		} else {
 			if len(containers) == 1 {
-				_, err := c.zkConn.Create(zkPath, []byte("localhost:"+strconv.FormatInt(containers[0].Ports[0].PrivatePort, 10)), int32(zk.FlagEphemeral)|int32(zk.FlagSequence), zk.WorldACL(zk.PermAll))
+				address, err = c.zkConn.Create(zkPath, []byte("localhost:"+strconv.FormatInt(containers[0].Ports[0].PrivatePort, 10)), int32(zk.FlagEphemeral)|int32(zk.FlagSequence), zk.WorldACL(zk.PermAll))
 				handleError(err)
+				time.Sleep(time.Second)
 				fmt.Println("[zookeeper] : Server registered")
 			} else {
-				err := c.zkConn.Delete(zkPath, -1)
-				handleError(err)
+				deleteErr := c.zkConn.Delete(address, -1)
+				handleError(deleteErr)
+				time.Sleep(time.Second)
 				fmt.Println("[zookeeper] : Server deleted")
 			}
 		}
